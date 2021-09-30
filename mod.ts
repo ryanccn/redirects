@@ -34,8 +34,8 @@ addEventListener('fetch', async (event: FetchEvent) => {
   }
 
   // ok
-  event.respondWith(responses.redirect(dbRes.data.t, dbRes.latency));
   await click(fragments[0]);
+  event.respondWith(responses.redirect(dbRes.data.t, dbRes.latency));
 
   return;
 });
