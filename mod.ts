@@ -1,43 +1,38 @@
-/// <reference types="./deploy.d.ts" />
+import { listenAndServe } from 'https://deno.land/std@0.113.0/http/server.ts';
 
 import { click, getRedirect } from './db.ts';
 import * as responses from './responses.ts';
 
-addEventListener('fetch', async (event: FetchEvent) => {
-  const req = event.request;
+import isDev from './_dev.ts';
 
+const handler = async (req: Request) => {
   const fragments = new URL(req.url).pathname.split('/').filter((a) => !!a);
 
   if (fragments.length === 0) {
     // root url
-    event.respondWith(responses.redirect('https://ryanccn.dev'));
-    return;
+    return responses.redirect('https://ryanccn.dev');
   }
 
   if (fragments.length >= 2) {
     // more than 1 piece of path
-    event.respondWith(responses.notFound());
-    return;
+    return responses.notFound();
   }
 
   if (req.method !== 'GET') {
-    event.respondWith(responses.notAllowed());
-    return;
+    return responses.notAllowed();
   }
 
   const dbRes = await getRedirect(fragments[0]);
 
   if (!dbRes.ok || !dbRes.data) {
     // no redirect exists for such an id
-    event.respondWith(responses.notFound());
-    return;
+    return responses.notFound();
   }
 
   // ok
   const clickRes = await click(fragments[0]);
-  event.respondWith(
-    responses.redirect(dbRes.data.t, dbRes.latency + clickRes.latency),
-  );
+  return responses.redirect(dbRes.data.t, dbRes.latency + clickRes.latency);
+};
 
-  return;
-});
+if (isDev) console.log('listening at port 8080');
+await listenAndServe(':8080', handler);

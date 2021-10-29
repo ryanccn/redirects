@@ -1,5 +1,3 @@
-/// <reference types="./deploy.d.ts" />
-
 export const redirect = (url: string, latency?: number) => {
   return new Response(`Redirecting you to ${url}...`, {
     headers: {

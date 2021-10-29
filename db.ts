@@ -1,7 +1,17 @@
-/// <reference types="./deploy.d.ts" />
+import isDev from './_dev.ts';
 
-const SUPABASE_KEY = Deno.env.get('SUPABASE_KEY');
-const REST_PREFIX = Deno.env.get('REST_PREFIX');
+let SUPABASE_KEY = Deno.env.get('SUPABASE_KEY');
+let REST_PREFIX = Deno.env.get('REST_PREFIX');
+
+if (isDev) {
+  const dotenv = (await import('https://deno.land/x/dotenv@v3.1.0/mod.ts'))
+    .config({
+      path: '.env.local',
+    });
+
+  SUPABASE_KEY = dotenv.SUPABASE_KEY;
+  REST_PREFIX = dotenv.REST_PREFIX;
+}
 
 if (!SUPABASE_KEY || !REST_PREFIX) {
   throw new ReferenceError('missing environment variables!');
@@ -23,13 +33,15 @@ interface DBResult {
 
 export const getRedirect = async (f: string) => {
   const a = Date.now();
+  const u = `${REST_PREFIX}?select=${
+    encodeURIComponent('"t", "clicks"')
+  }&f=eq.${encodeURIComponent(f)}`;
+
+  if (isDev) console.log(`[getRedirect] fetching ${u}`);
+
   const r = await fetch(
-    `${REST_PREFIX}?select=${encodeURIComponent('"t", "clicks"')}&f=eq.${
-      encodeURIComponent(f)
-    }`,
-    {
-      headers: commonHeaders,
-    },
+    u,
+    { headers: commonHeaders },
   );
   const b = Date.now();
 
@@ -43,7 +55,11 @@ export const click = async (f: string) => {
   const a = Date.now();
 
   const r1 = await getRedirect(f);
-  const r2 = await fetch(`${REST_PREFIX}?f=eq.${encodeURIComponent(f)}`, {
+
+  const u2 = `${REST_PREFIX}?f=eq.${encodeURIComponent(f)}`;
+  if (isDev) console.log(`[click] fetching ${u2}`);
+
+  const r2 = await fetch(u2, {
     headers: commonHeaders,
     body: JSON.stringify({ clicks: (r1.data.clicks ?? 0) + 1 }),
     method: 'PATCH',

@@ -1,7 +1,7 @@
 scripts:
   dev:
     desc: start up the dev server
-    cmd: deployctl run --libs="" --watch --env=./.env mod.ts
-  check:
-    desc: check types
-    cmd: deployctl check --libs="" mod.ts
+    cmd: DENO_DEV=1 deno run -A --watch mod.ts
+  lint:
+    desc: lint
+    cmd: deno lint mod.ts
