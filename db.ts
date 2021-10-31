@@ -9,6 +9,8 @@ if (isDev) {
       path: '.env.local',
     });
 
+  console.log('loaded environment vars from `.env.local`');
+
   SUPABASE_KEY = dotenv.SUPABASE_KEY;
   REST_PREFIX = dotenv.REST_PREFIX;
 }
@@ -31,43 +33,48 @@ interface DBResult {
   clicks: number;
 }
 
-export const getRedirect = async (f: string) => {
+export const get = async (f: string) => {
   const a = Date.now();
   const u = `${REST_PREFIX}?select=${
-    encodeURIComponent('"t", "clicks"')
+    encodeURIComponent('"f", "t", "clicks"')
   }&f=eq.${encodeURIComponent(f)}`;
 
-  if (isDev) console.log(`[getRedirect] fetching ${u}`);
+  if (isDev) console.log(`[get] fetching ${u}`);
 
   const r = await fetch(
     u,
     { headers: commonHeaders },
   );
-  const b = Date.now();
+  if (!r.ok && r.status !== 404) {
+    throw new Error(`[get] failed with status code ${r.status}`);
+  }
 
   const data: DBResult = (await r.json())[0];
-  if (data) data.f = f;
+
+  const b = Date.now();
 
   return { data, ok: r.ok, latency: b - a };
 };
 
-export const click = async (f: string) => {
+export const click = async (f: string, originalClicks: number) => {
   const a = Date.now();
 
-  const r1 = await getRedirect(f);
+  const u = `${REST_PREFIX}?f=eq.${encodeURIComponent(f)}`;
+  if (isDev) console.log(`[click] fetching ${u}`);
 
-  const u2 = `${REST_PREFIX}?f=eq.${encodeURIComponent(f)}`;
-  if (isDev) console.log(`[click] fetching ${u2}`);
-
-  const r2 = await fetch(u2, {
+  const r = await fetch(u, {
     headers: commonHeaders,
-    body: JSON.stringify({ clicks: (r1.data.clicks ?? 0) + 1 }),
+    body: JSON.stringify({ clicks: originalClicks + 1 }),
     method: 'PATCH',
   });
+  if (!r.ok && r.status !== 404) {
+    console.log(await r.json());
+    throw new Error(`[click] failed with status code ${r.status}`);
+  }
 
-  const data: DBResult = await r2.json();
+  const data: DBResult = await r.json();
 
   const b = Date.now();
 
-  return { data, ok: r2.ok, latency: b - a };
+  return { data, ok: r.ok, latency: b - a };
 };
