@@ -1,3 +1,4 @@
+import { DBFetchError, EnvVarsError } from './_errors.ts';
 import isDev from './_dev.ts';
 
 let SUPABASE_KEY = Deno.env.get('SUPABASE_KEY');
@@ -16,7 +17,7 @@ if (isDev) {
 }
 
 if (!SUPABASE_KEY || !REST_PREFIX) {
-  throw new ReferenceError('missing environment variables!');
+  throw new EnvVarsError('missing environment variables!');
 }
 
 const commonHeaders = {
@@ -34,7 +35,8 @@ interface DBResult {
 }
 
 export const get = async (f: string) => {
-  const a = Date.now();
+  const a = performance.now();
+
   const u = `${REST_PREFIX}?select=${
     encodeURIComponent('"f", "t", "clicks"')
   }&f=eq.${encodeURIComponent(f)}`;
@@ -46,18 +48,18 @@ export const get = async (f: string) => {
     { headers: commonHeaders },
   );
   if (!r.ok && r.status !== 404) {
-    throw new Error(`[get] failed with status code ${r.status}`);
+    throw new DBFetchError(`[get] failed with status code ${r.status}`);
   }
 
   const data: DBResult = (await r.json())[0];
 
-  const b = Date.now();
+  const b = performance.now();
 
   return { data, ok: r.ok, latency: b - a };
 };
 
 export const click = async (f: string, originalClicks: number) => {
-  const a = Date.now();
+  const a = performance.now();
 
   const u = `${REST_PREFIX}?f=eq.${encodeURIComponent(f)}`;
   if (isDev) console.log(`[click] fetching ${u}`);
@@ -69,12 +71,12 @@ export const click = async (f: string, originalClicks: number) => {
   });
   if (!r.ok && r.status !== 404) {
     console.log(await r.json());
-    throw new Error(`[click] failed with status code ${r.status}`);
+    throw new DBFetchError(`[click] failed with status code ${r.status}`);
   }
 
   const data: DBResult = await r.json();
 
-  const b = Date.now();
+  const b = performance.now();
 
   return { data, ok: r.ok, latency: b - a };
 };
