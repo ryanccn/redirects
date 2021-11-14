@@ -1,4 +1,4 @@
-import { listenAndServe } from 'https://deno.land/std@0.113.0/http/server.ts';
+import { serve } from 'https://deno.land/std@0.114.0/http/server.ts';
 
 import { click, get } from './db.ts';
 import * as responses from './responses.ts';
@@ -35,4 +35,4 @@ const handler = async (req: Request) => {
 };
 
 if (isDev) console.log('listening at port 8080');
-await listenAndServe(':8080', handler);
+await serve(handler, { addr: ':8080' });
