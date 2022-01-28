@@ -1,8 +1,14 @@
-import { DBFetchError, EnvVarsError } from './_errors.ts';
+import {
+  auth,
+  get as upstashGet,
+  // set as upstashSet,
+} from 'https://cdn.skypack.dev/@upstash/redis@0.2.1?dts';
+
+import { EnvVarsError, UpstashError } from './_errors.ts';
 import isDev from './_dev.ts';
 
-let SUPABASE_KEY = Deno.env.get('SUPABASE_KEY');
-let REST_PREFIX = Deno.env.get('REST_PREFIX');
+let UPSTASH_REDIS_REST_URL = Deno.env.get('UPSTASH_REDIS_REST_URL');
+let UPSTASH_REDIS_REST_TOKEN = Deno.env.get('UPSTASH_REDIS_REST_TOKEN');
 
 if (isDev) {
   const dotenv = (await import('https://deno.land/x/dotenv@v3.1.0/mod.ts'))
@@ -12,71 +18,29 @@ if (isDev) {
 
   console.log('loaded environment vars from `.env.local`');
 
-  SUPABASE_KEY = dotenv.SUPABASE_KEY;
-  REST_PREFIX = dotenv.REST_PREFIX;
+  UPSTASH_REDIS_REST_URL = dotenv.UPSTASH_REDIS_REST_URL;
+  UPSTASH_REDIS_REST_TOKEN = dotenv.UPSTASH_REDIS_REST_TOKEN;
 }
 
-if (!SUPABASE_KEY || !REST_PREFIX) {
+if (!UPSTASH_REDIS_REST_URL || !UPSTASH_REDIS_REST_TOKEN) {
   throw new EnvVarsError('missing environment variables!');
 }
 
-const commonHeaders = {
-  'apikey': SUPABASE_KEY,
-  'authorization': `Bearer ${SUPABASE_KEY}`,
-  'x-client-info': 'supabase-js/1.22.6',
-  'content-type': 'application/json',
-  'prefer': 'return=representation',
+auth({
+  url: UPSTASH_REDIS_REST_URL,
+  token: UPSTASH_REDIS_REST_TOKEN,
+});
+
+export const get = async (key: string): Promise<string | undefined> => {
+  const ret = await upstashGet(key);
+
+  if (ret.error) throw new UpstashError(ret.error);
+
+  return ret.data;
 };
 
-interface DBResult {
-  f: string;
-  t: string;
-  clicks: number;
-}
+// export const set = async (key: string, value: string) => {
+//   const ret = await upstashSet(key, value);
 
-export const get = async (f: string) => {
-  const a = performance.now();
-
-  const u = `${REST_PREFIX}?select=${
-    encodeURIComponent('"f", "t", "clicks"')
-  }&f=eq.${encodeURIComponent(f)}`;
-
-  if (isDev) console.log(`[get] fetching ${u}`);
-
-  const r = await fetch(
-    u,
-    { headers: commonHeaders },
-  );
-  if (!r.ok && r.status !== 404) {
-    throw new DBFetchError(`[get] failed with status code ${r.status}`);
-  }
-
-  const data: DBResult = (await r.json())[0];
-
-  const b = performance.now();
-
-  return { data, ok: r.ok, latency: b - a };
-};
-
-export const click = async (f: string, originalClicks: number) => {
-  const a = performance.now();
-
-  const u = `${REST_PREFIX}?f=eq.${encodeURIComponent(f)}`;
-  if (isDev) console.log(`[click] fetching ${u}`);
-
-  const r = await fetch(u, {
-    headers: commonHeaders,
-    body: JSON.stringify({ clicks: originalClicks + 1 }),
-    method: 'PATCH',
-  });
-  if (!r.ok && r.status !== 404) {
-    console.log(await r.json());
-    throw new DBFetchError(`[click] failed with status code ${r.status}`);
-  }
-
-  const data: DBResult = await r.json();
-
-  const b = performance.now();
-
-  return { data, ok: r.ok, latency: b - a };
-};
+//   if (ret.error) throw new UpstashError(ret.error);
+// };

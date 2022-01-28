@@ -5,9 +5,9 @@ export class EnvVarsError extends Error {
   }
 }
 
-export class DBFetchError extends Error {
+export class UpstashError extends Error {
   constructor(msg: string) {
     super(msg);
-    this.name = 'DBFetchError';
+    this.name = 'UpstashError';
   }
 }

@@ -4,7 +4,7 @@ export const redirect = (url: string, latency?: number) => {
   return new Response(`Redirecting you to ${url}...`, {
     headers: {
       location: url,
-      'X-Database-Latency': ((latency ?? 0) / 1000).toFixed(2) + 's',
+      'X-Redis-Latency': (latency ?? 0).toFixed(2) + 'ms',
       ...plainTextHeader,
     },
 
